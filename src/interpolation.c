@@ -68,6 +68,7 @@ int msInterpolationDataset(mapObj *map, imageObj *image,
   shapeObj shape;
   layerObj *layer = NULL;
   float *values = NULL, *xyz_values = NULL;
+  size_t xyz_size = 0;
   int im_width = image->width, im_height = image->height;
   double invcellsize = 1.0 / map->cellsize, georadius = 0;
   unsigned char *iValues;
@@ -176,8 +177,8 @@ int msInterpolationDataset(mapObj *map, imageObj *image,
       if (!values) { /* defer allocation until we effectively have a feature */
         values = (float *)msSmallCalloc(((size_t)im_width) * im_height,
                                         sizeof(float));
-        xyz_values = (float *)msSmallCalloc(((size_t)im_width) * im_height,
-                                            sizeof(float));
+        xyz_size = ((size_t)im_width) * im_height;
+        xyz_values = (float *)msSmallCalloc(xyz_size, sizeof(float));
       }
       if (layer->project)
         msProjectShape(&layer->projection, &map->projection, &shape);
@@ -223,6 +224,13 @@ int msInterpolationDataset(mapObj *map, imageObj *image,
           if (x >= 0 && y >= 0 && x < im_width && y < im_height) {
             float *value = values + y * im_width + x;
             (*value) += weight;
+            /* a triplet is emitted per vertex, so the sample count is bound by
+               the source layer, not by the number of raster cells */
+            if ((size_t)length + 3 > xyz_size) {
+              xyz_size = xyz_size * 2 + 3;
+              xyz_values =
+                  (float *)msSmallRealloc(xyz_values, xyz_size * sizeof(float));
+            }
             xyz_values[length++] = x;
             xyz_values[length++] = y;
             xyz_values[length++] = (*value);

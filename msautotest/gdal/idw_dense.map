@@ -1,0 +1,58 @@
+#RUN_PARMS: idw_dense.png [MAPSERV] QUERY_STRING="map=[MAPFILE]&LAYERS=idw&BBOX=-180,-90,180,90&WIDTH=40&HEIGHT=20&VERSION=1.1.1&FORMAT=image%2Fpng&SERVICE=WMS&REQUEST=GetMap&STYLES=&EXCEPTIONS=application%2Fvnd.ogc.se_inimage&SRS=EPSG%3A4326" > [RESULT_DEMIME]
+#
+# Interpolation over a point layer holding more vertices (1000) than the
+# requested raster has cells (40x20), i.e. WIDTH/HEIGHT small relative to the
+# sample count. The collected x/y/value triplets have to outgrow the raster.
+#
+map
+
+  size 1000 500
+  extent -180 -90 180 90
+  name "test idw dense"
+  imagetype "png"
+  units dd
+
+  web
+    metadata
+      "ows_srs" "epsg:4326"
+      "ows_enable_request" "*"
+    end
+  end
+
+  projection
+    "+init=epsg:4326"
+  end
+  CONFIG "MS_ERRORFILE" "stderr"
+
+  layer
+    name "idw"
+    type raster
+    connectiontype idw
+    connection "points"
+    status on
+    processing "RANGE_COLORSPACE=RGB"
+    processing "IDW_RADIUS=20"
+    processing "IDW_POWER=1"
+    processing "IDW_COMPUTE_BORDERS=OFF"
+    offsite 0 0 0
+    class
+      style
+        COLORRANGE  "#0000ff"  "#ff0000"
+        DATARANGE 0 30
+      end
+    end
+  end
+
+  layer
+    name "points"
+    status off
+    type POINT
+    data "data/pnts.shp"
+    class
+      style
+        SIZE 1
+      end
+    end
+  end
+
+end
