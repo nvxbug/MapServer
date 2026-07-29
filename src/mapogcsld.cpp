@@ -1404,6 +1404,26 @@ int msSLDParseStroke(CPLXMLNode *psStroke, styleObj *psStyle, mapObj *map,
 }
 
 /************************************************************************/
+/*                    msSLDGetArithmeticOperator()                      */
+/*                                                                      */
+/*    Return the operator of an <ogc:Add>, <ogc:Sub>, <ogc:Mul> or      */
+/*    <ogc:Div> element, or '\0' if the element is not one of them.     */
+/************************************************************************/
+static char msSLDGetArithmeticOperator(const char *pszElement) {
+  const struct {
+    const char *name;
+    char op;
+  } asOps[] = {{"Add", '+'}, {"Sub", '-'}, {"Mul", '*'}, {"Div", '/'}};
+
+  for (size_t i = 0; i < sizeof(asOps) / sizeof(asOps[0]); i++) {
+    if (strcasecmp(pszElement, asOps[i].name) == 0)
+      return asOps[i].op;
+  }
+
+  return '\0';
+}
+
+/************************************************************************/
 /*  int msSLDParseOgcExpression(CPLXMLNode *psRoot, styleObj *psStyle,  */
 /*                              enum MS_STYLE_BINDING_ENUM binding)     */
 /*                                                                      */
@@ -1412,7 +1432,6 @@ int msSLDParseStroke(CPLXMLNode *psStroke, styleObj *psStyle, mapObj *map,
 int msSLDParseOgcExpression(CPLXMLNode *psRoot, void *psObj, int binding,
                             enum objType objtype) {
   int status = MS_FAILURE;
-  const char *ops = "Add+Sub-Mul*Div/";
   styleObj *psStyle = static_cast<styleObj *>(psObj);
   labelObj *psLabel = static_cast<labelObj *>(psObj);
   int lbinding;
@@ -1594,10 +1613,10 @@ int msSLDParseOgcExpression(CPLXMLNode *psRoot, void *psObj, int binding,
       exprBindings[binding].type = MS_EXPRESSION;
       (*nexprbindings)++;
       status = MS_SUCCESS;
-    } else if (strstr(ops, psRoot->pszValue) && psRoot->psChild &&
-               psRoot->psChild->psNext) {
+    } else if (msSLDGetArithmeticOperator(psRoot->pszValue) &&
+               psRoot->psChild && psRoot->psChild->psNext) {
       // Parse an arithmetic element <ogc:Add>, <ogc:Sub>, <ogc:Mul>, <ogc:Div>
-      const char op[2] = {*(strstr(ops, psRoot->pszValue) + 3), '\0'};
+      const char op[2] = {msSLDGetArithmeticOperator(psRoot->pszValue), '\0'};
       msStringBuffer *expression = msStringBufferAlloc();
 
       // Parse first operand
